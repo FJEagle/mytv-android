@@ -17,6 +17,7 @@
 /.idea/emulatorDisplays.xml
 .DS_Store
 /build
+app/build
 /captures
 .externalNativeBuild
 .cxx
