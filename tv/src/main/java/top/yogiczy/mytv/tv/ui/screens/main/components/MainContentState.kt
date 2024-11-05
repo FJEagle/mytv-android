@@ -63,8 +63,10 @@ class MainContentState(
         }
 
     private var _isSettingsScreenVisible by mutableStateOf(false)
+    // 2024.11.5: 确保Setting页面，始终不显示
     var isSettingsScreenVisible
-        get() = _isSettingsScreenVisible
+        //get() = _isSettingsScreenVisible
+        get() = false
         set(value) {
             _isSettingsScreenVisible = value
         }

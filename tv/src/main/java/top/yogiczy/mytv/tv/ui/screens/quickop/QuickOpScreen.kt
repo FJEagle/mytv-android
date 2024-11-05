@@ -283,15 +283,17 @@ private fun QuickOpScreenBottom(
                 showChannelLogoProvider = showChannelLogoProvider,
             )
 
-            QuickOpBtnList(
-                onShowEpg = onShowEpg,
-                onShowChannelUrl = onShowChannelUrl,
-                onShowVideoPlayerController = onShowVideoPlayerController,
-                onShowVideoPlayerDisplayMode = onShowVideoPlayerDisplayMode,
-                onShowMoreSettings = onShowMoreSettings,
-                onClearCache = onClearCache,
-                onUserAction = onUserAction,
-            )
+            if (false) {// 不显示这个快捷入口
+                QuickOpBtnList(
+                    onShowEpg = onShowEpg,
+                    onShowChannelUrl = onShowChannelUrl,
+                    onShowVideoPlayerController = onShowVideoPlayerController,
+                    onShowVideoPlayerDisplayMode = onShowVideoPlayerDisplayMode,
+                    onShowMoreSettings = onShowMoreSettings,
+                    onClearCache = onClearCache,
+                    onUserAction = onUserAction,
+                )
+            }
         }
     }
 }

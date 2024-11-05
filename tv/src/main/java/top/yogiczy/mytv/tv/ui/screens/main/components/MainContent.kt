@@ -336,7 +336,8 @@ fun MainContent(
             },
             onShowMoreSettings = {
                 mainContentState.isQuickOpScreenVisible = false
-                mainContentState.isSettingsScreenVisible = true
+                // 注释掉，确保 SettingsScreen 不会弹出
+                //mainContentState.isSettingsScreenVisible = true
             },
             onClearCache = {
                 settingsViewModel.iptvPlayableHostList = emptySet()
