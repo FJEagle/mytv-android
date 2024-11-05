@@ -134,10 +134,12 @@ private fun QuickOpScreenTop(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        CompositionLocalProvider(
-            LocalTextStyle provides MaterialTheme.typography.titleLarge
-        ) {
-            QuickOpScreeIptvSource()
+        if (false){
+            CompositionLocalProvider(
+                LocalTextStyle provides MaterialTheme.typography.titleLarge
+            ) {
+                QuickOpScreeIptvSource()
+            }
         }
 
         Row(
