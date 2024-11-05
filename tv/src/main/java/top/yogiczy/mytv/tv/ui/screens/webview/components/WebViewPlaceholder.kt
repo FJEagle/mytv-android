@@ -22,7 +22,8 @@ fun WebViewPlaceholder(
             .background(Color.Black.copy(0.8f)),
     ) {
         Text(
-            text = "混合模式（webview）",
+            // text = "混合模式（webview）",
+            text = "正在加载中...",
             modifier = Modifier.align(Alignment.Center),
             style = MaterialTheme.typography.titleLarge,
         )
