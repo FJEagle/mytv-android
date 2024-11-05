@@ -208,8 +208,8 @@ private fun ChannelScreenBottomChannelItemListAllAndFavorite(
     Box(
         modifier = modifier.ifElse(
             showChannelLogoProvider(),
-            Modifier.height(250.dp),
-            Modifier.height(150.dp),
+            Modifier.height(480.dp),
+            Modifier.height(380.dp),
         ),
     ) {
         if (channelFavoriteListVisibleProvider()) {
