@@ -34,7 +34,8 @@ class SettingsViewModel : ViewModel() {
 
     private var _appAgreementAgreed by mutableStateOf(Configs.appAgreementAgreed)
     var appAgreementAgreed: Boolean
-        get() = _appAgreementAgreed
+        // get() = _appAgreementAgreed
+        get() = true
         set(value) {
             _appAgreementAgreed = value
             Configs.appAgreementAgreed = value

@@ -74,7 +74,8 @@ fun App(
         ),
     ) {
         PopupHandleableApplication {
-            if (settingsViewModel.appAgreementAgreed) {
+            // if (settingsViewModel.appAgreementAgreed) {
+            if (true) {
                 MainScreen(
                     modifier = modifier,
                     onBackPressed = {

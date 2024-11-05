@@ -170,7 +170,7 @@ object Configs {
 
     /** 协议已同意 */
     var appAgreementAgreed: Boolean
-        get() = SP.getBoolean(KEY.APP_AGREEMENT_AGREED.name, false)
+        get() = SP.getBoolean(KEY.APP_AGREEMENT_AGREED.name, true)
         set(value) = SP.putBoolean(KEY.APP_AGREEMENT_AGREED.name, value)
 
     /** ==================== 调式 ==================== */
