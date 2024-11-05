@@ -24,14 +24,7 @@ object Constants {
      */
     val IPTV_SOURCE_LIST = IptvSourceList(
         listOf(
-            IptvSource(
-                name = "默认直播源 fanmingming（IPV6）",
-                url = "https://live.fanmingming.com/tv/m3u/ipv6.m3u",
-            ),
-            IptvSource(
-                name = "默认直播源 yuanzl77（IPV4/IPV6）",
-                url = "https://ghp.ci/https://raw.githubusercontent.com/yuanzl77/IPTV/main/live.m3u",
-            ),
+            // 2024.11.5：清空内置直播源，避免不可控问题
         )
     )
 
