@@ -1,20 +1,39 @@
 package top.yogiczy.mytv.tv.ui.utils
 
+import android.content.Context
+import android.content.pm.PackageInfo
+import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.util.Base64
+import android.util.Log
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
 import top.yogiczy.mytv.core.data.entities.epg.EpgProgrammeReserveList
 import top.yogiczy.mytv.core.data.entities.epgsource.EpgSource
 import top.yogiczy.mytv.core.data.entities.epgsource.EpgSourceList
 import top.yogiczy.mytv.core.data.entities.iptvsource.IptvSource
 import top.yogiczy.mytv.core.data.entities.iptvsource.IptvSourceList
 import top.yogiczy.mytv.core.data.utils.Constants
+import top.yogiczy.mytv.core.data.utils.Logger
 import top.yogiczy.mytv.core.data.utils.SP
+import top.yogiczy.mytv.tv.MyTVApplication
+import top.yogiczy.mytv.tv.R
 import top.yogiczy.mytv.tv.ui.screens.videoplayer.VideoPlayerDisplayMode
+import java.io.BufferedReader
+import java.io.File
+import java.io.FileReader
+import java.util.Locale
+import java.util.Scanner
 
 /**
  * 应用配置
  */
 object Configs {
+    private val log = Logger.create(javaClass.simpleName)
+
     enum class KEY {
         /** ==================== 应用 ==================== */
         /** 开机自启 */
@@ -182,10 +201,233 @@ object Configs {
         set(value) = SP.putBoolean(KEY.IPTV_CHANNEL_CHANGE_FLIP.name, value)
 
     /** 当前直播源 */
+    // 2024.11.5: 强制使用自定义配置
     var iptvSourceCurrent: IptvSource
-        get() = Json.decodeFromString(SP.getString(KEY.IPTV_SOURCE_CURRENT.name, "")
+        get() = _customIptvSource ?: Json.decodeFromString(SP.getString(KEY.IPTV_SOURCE_CURRENT.name, "")
             .ifBlank { Json.encodeToString(Constants.IPTV_SOURCE_LIST.first()) })
         set(value) = SP.putString(KEY.IPTV_SOURCE_CURRENT.name, Json.encodeToString(value))
+
+    private val _customIptvSource: IptvSource? by lazy {
+        loadCustomIptvSource()
+    }
+    private fun loadCustomIptvSource(): IptvSource?{
+        // 2024.11.5: 暂时兼容tvbox的配置方式，也没有新的配置？
+        return loadCustomIptvSourceByTvboxConfig()
+    }
+
+    /**
+     * 2024.11.5: 移植原来的tvbox的自定义配置方式，兼容已有设备的tvbox方式的配置
+     */
+    private fun loadCustomIptvSourceByTvboxConfig(): IptvSource?{
+        // 2023.11.23：尝试从动态下载、ROM和应用内等查找配置文件
+        val context = MyTVApplication.application
+        val jsonStr: String = readCustomJsonFileWrapper(context)
+        try {
+            val liveUrlFinal = parseJson(jsonStr)
+            return IptvSource(
+                name = "xxx自定义",
+                url = liveUrlFinal,
+                isLocal = false
+            )
+        } catch (th: Throwable) {
+            th.printStackTrace()
+            return null
+        }
+    }
+
+    /**
+     * 2024.11.5： 从原tvbox代码中移植过来，删减
+     */
+    private fun parseJson(jsonStr: String): String {
+        val infoJson =Json.parseToJsonElement(jsonStr).jsonObject
+
+        var liveURL_final: String = ""
+        val context = MyTVApplication.application
+        try {
+            if ("lives" in infoJson && infoJson["lives"]?.jsonArray != null) {
+                val livesOBJ = infoJson["lives"]?.jsonArray?.get(0)?.jsonObject
+                val lives: String = livesOBJ.toString()
+                log.d("lives:$lives")
+                val index = lives.indexOf("proxy://")
+                if (index != -1) {
+                    val endIndex = lives.lastIndexOf("\"")
+                    var url = lives.substring(index, endIndex)
+                    url = checkReplaceProxy(url)
+                    log.d("url:$url")
+
+                    //clan
+                    val extUrl = Uri.parse(url).getQueryParameter("ext")
+                    log.d("ext:$extUrl")
+                    if (extUrl != null && !extUrl.isEmpty()) {
+                        var extUrlFix: String
+                        extUrlFix = if (extUrl.startsWith("http") || extUrl.startsWith("clan://")) {
+                            extUrl
+                        } else {
+                            String(Base64.decode(extUrl, Base64.DEFAULT or Base64.URL_SAFE or Base64.NO_WRAP), charset("UTF-8"))
+                        }
+
+                        // takagen99: Capture Live URL into Config
+                        Log.d("tv", "Live URL :$extUrlFix")
+
+                        // 2023.11.23: 附加额外的上下文参数
+                        //api携带的app基本信息参数的参数名称KEY
+                        val API_APP_BASIC_INFO_PARAM_KEY_DEVICE_MODEL = "deviceModel"
+                        val API_APP_BASIC_INFO_PARAM_KEY_ROM_VERSION = "romVersion"
+
+                        /**
+                         * 安卓系统提供的build厂商信息
+                         */
+                        val API_APP_BASIC_INFO_PARAM_KEY_BUILD_MANUFACTURER = "buildManufacturer"
+
+                        /**
+                         * 安卓系统提供的build品牌信息
+                         */
+                        val API_APP_BASIC_INFO_PARAM_KEY_BUILD_BRAND = "buildBrand"
+                        val API_APP_BASIC_INFO_PARAM_KEY_PKG_NAME = "packageName"
+                        val API_APP_BASIC_INFO_PARAM_KEY_VERSION = "version"
+                        val API_APP_BASIC_INFO_PARAM_KEY_VERSION_CODE = "versionCode"
+                        val API_APP_BASIC_INFO_PARAM_KEY_DEVICE_UA = "deviceUA"
+                        val packageName: String = context.getPackageName()
+                        val packageInfo: PackageInfo = context.getPackageManager().getPackageInfo(packageName, 0)
+                        val uaStr = String.format(
+                            Locale.getDefault(), "%s/%s/%s/%s/%s/%d",
+                            Build.MANUFACTURER,
+                            Build.BRAND,
+                            Build.MODEL,
+                            Build.VERSION.RELEASE,
+                            Build.DISPLAY,
+                            Build.VERSION.SDK_INT
+                        )
+                        // 使用 Uri 类来处理 URL
+                        val builder = Uri.parse(extUrlFix).buildUpon()
+                        builder.appendQueryParameter(
+                            API_APP_BASIC_INFO_PARAM_KEY_DEVICE_MODEL,
+                            Build.MODEL
+                        )
+                        builder.appendQueryParameter(
+                            API_APP_BASIC_INFO_PARAM_KEY_ROM_VERSION,
+                            Build.DISPLAY
+                        )
+                        builder.appendQueryParameter(
+                            API_APP_BASIC_INFO_PARAM_KEY_BUILD_MANUFACTURER,
+                            Build.MANUFACTURER
+                        )
+                        builder.appendQueryParameter(
+                            API_APP_BASIC_INFO_PARAM_KEY_BUILD_BRAND,
+                            Build.BRAND
+                        )
+                        builder.appendQueryParameter(API_APP_BASIC_INFO_PARAM_KEY_DEVICE_UA, uaStr)
+                        builder.appendQueryParameter(
+                            API_APP_BASIC_INFO_PARAM_KEY_PKG_NAME,
+                            packageName
+                        )
+                        builder.appendQueryParameter(
+                            API_APP_BASIC_INFO_PARAM_KEY_VERSION,
+                            packageInfo.versionName
+                        )
+                        builder.appendQueryParameter(
+                            API_APP_BASIC_INFO_PARAM_KEY_VERSION_CODE,
+                            packageInfo.versionCode.toString() + ""
+                        )
+                        val urlWithContext = builder.build().toString()
+                        Log.d("tv", "Live URL withContext:$urlWithContext")
+
+                        // Final Live URL
+                        // liveURL_final = extUrlFix;
+                        liveURL_final = urlWithContext
+                    }
+                }
+            }
+        } catch (th: Throwable) {
+            th.printStackTrace()
+        }
+        return liveURL_final
+    }
+
+    private fun checkReplaceProxy(urlOri: String): String {
+        if (urlOri.startsWith("proxy://")) return urlOri.replace("proxy://", "http://127.0.0.1:8080/proxy?")
+        return urlOri
+    }
+
+    fun readJsonFile(context: Context, resourceId: Int): String {
+        val jsonStringBuilder = StringBuilder()
+
+        try {
+            // 获取 Resources 对象
+            val resources = context.resources
+
+            // 打开指定资源的 InputStream
+            val inputStream = resources.openRawResource(resourceId)
+
+            // 使用 Scanner 读取 InputStream 中的内容
+            val scanner = Scanner(inputStream)
+            while (scanner.hasNextLine()) {
+                jsonStringBuilder.append(scanner.nextLine())
+            }
+
+            // 关闭 InputStream 和 Scanner
+            inputStream.close()
+            scanner.close()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        // 返回 JSON 字符串
+        return jsonStringBuilder.toString()
+    }
+
+    @Throws(Exception::class)
+    private fun readFileContent(file: File): String {
+        val content = StringBuilder()
+
+        BufferedReader(FileReader(file)).use { reader ->
+            var line: String?
+            while ((reader.readLine().also { line = it }) != null) {
+                content.append(line).append("\n")
+            }
+        }
+        return content.toString()
+    }
+
+    /**
+     * 下载到sdcard/tvbox/tv.txt > 下载到sdcard/tv.txt > ROM/custom/tvbox/tv.txt > raw/tv.txt
+     */
+    private fun readCustomJsonFileWrapper(context: Context): String {
+        // 避免可能动态下载存储和ROM存储的位置
+        val pathsToCheck = arrayOf( // 优选这个
+            Environment.getExternalStorageDirectory().toString() + "/xxx/xx_v_t.txt",
+            Environment.getExternalStorageDirectory().toString() + "/xxx/tv.txt",
+            Environment.getExternalStorageDirectory().toString() + "/tvbox/tv.txt",
+            Environment.getExternalStorageDirectory().toString() + "/xx_v_t.txt",
+            Environment.getExternalStorageDirectory().toString() + "/tv.txt",  // 优选这个
+            "/system/custom/xxx/xx_v_t.txt",
+            "/system/custom/xxx/tv.txt",
+            "/system/custom/tvbox/tv.txt",
+            "/system/custom/xx_v_t.txt",
+            "/system/custom/tv.txt"
+        )
+
+        for (path in pathsToCheck) {
+            try {
+                val file = File(path)
+                if (file.exists()) {
+                    Log.d("tv", "found:" + file.absolutePath)
+                    // 如果文件存在，尝试读取文件内容
+                    return readFileContent(file)
+                }
+            } catch (e: SecurityException) {
+                // 捕获没有权限的异常，打印日志，不中断流程
+                Log.e("FileChecker", "Permission denied: $path")
+            } catch (e: Exception) {
+                // 捕获其他异常，打印日志，不中断流程
+                Log.e("FileChecker", "Error reading file: $path", e)
+            }
+        }
+
+        // 最后：使用内置的资源文件
+        val jsonStr = readJsonFile(context, R.raw.tv_legacy_tvbox)
+        return jsonStr
+    }
 
     /** 直播源列表 */
     var iptvSourceList: IptvSourceList
