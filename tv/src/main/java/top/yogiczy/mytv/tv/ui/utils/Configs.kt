@@ -438,7 +438,9 @@ object Configs {
 
     /** 直播源缓存时间（毫秒） */
     var iptvSourceCacheTime: Long
-        get() = SP.getLong(KEY.IPTV_SOURCE_CACHE_TIME.name, Constants.IPTV_SOURCE_CACHE_TIME)
+        // 2024.11.6: 不缓存直播源(或者只缓存很短时间，比如10s)，始终需要从服务器获取
+        // get() = SP.getLong(KEY.IPTV_SOURCE_CACHE_TIME.name, Constants.IPTV_SOURCE_CACHE_TIME)
+        get() = 10*1000L
         set(value) = SP.putLong(KEY.IPTV_SOURCE_CACHE_TIME.name, value)
 
     /** 直播源可播放host列表 */
