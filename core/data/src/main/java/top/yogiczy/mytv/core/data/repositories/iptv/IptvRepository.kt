@@ -1,15 +1,23 @@
 package top.yogiczy.mytv.core.data.repositories.iptv
 
+import android.util.Base64
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.Response
+import org.json.JSONObject
 import top.yogiczy.mytv.core.data.entities.channel.ChannelGroupList
 import top.yogiczy.mytv.core.data.entities.iptvsource.IptvSource
 import top.yogiczy.mytv.core.data.network.await
 import top.yogiczy.mytv.core.data.repositories.FileCacheRepository
 import top.yogiczy.mytv.core.data.repositories.iptv.parser.IptvParser
 import top.yogiczy.mytv.core.data.utils.Logger
+import top.yogiczy.mytv.core.data.xxx.bean.QmExtraResult
+import top.yogiczy.mytv.core.data.xxx.common.string.CommaSeparatorStringHelper
+import top.yogiczy.mytv.core.data.xxx.config.IConfigConsts
+import top.yogiczy.mytv.core.data.xxx.context.XxxContext
+import top.yogiczy.mytv.core.data.xxx.okhttp.OkhttpQmExtraParamSearcher
 
 /**
  * 直播源数据获取
@@ -22,6 +30,38 @@ class IptvRepository(
     source.isLocal,
 ) {
     private val log = Logger.create(javaClass.simpleName)
+
+    /**
+     * 2024.11.6: 尝试解析可选的qmextra header，获取自定义的配置
+     */
+    private fun parseQmExtraResult(okHttpResponse: Response?): QmExtraResult {
+        val qmExtraResult =QmExtraResult()
+        if ((okHttpResponse == null)) {
+            log.e("load response null")
+            return qmExtraResult
+        }
+        try {
+            val qmextra = OkhttpQmExtraParamSearcher().searchQmExtraParam(okHttpResponse)
+            //            Logger.debug("url:"+url+",qmextra"+qmextra);
+            if (qmextra.isNullOrBlank()) {
+                log.d("qmextra not found")
+                return qmExtraResult
+            }
+            log.d("found qmextra:$qmextra")
+            val jsonObject = try{
+                JSONObject(qmextra)
+            }catch (ex: Exception){
+                ex.printStackTrace()
+                // 尝试64位解码后，再获取json
+                val qmextraDecoded = String(Base64.decode(qmextra, Base64.DEFAULT or Base64.URL_SAFE or Base64.NO_WRAP), charset("UTF-8"))
+                JSONObject(qmextraDecoded)
+            }
+            qmExtraResult.hybridMode = jsonObject.optString("hybridMode")
+        } catch (ex: Exception) {
+            ex.printStackTrace()
+        }
+        return qmExtraResult
+    }
 
     /**
      * 获取直播源数据
@@ -37,9 +77,19 @@ class IptvRepository(
 
             if (!response.isSuccessful) throw Exception("${response.code}: ${response.message}")
 
-            return withContext(Dispatchers.IO) {
+            val bodyStr = withContext(Dispatchers.IO) {
                 response.body?.string() ?: ""
             }
+
+            // 2024.11.6: 增加额外可选的控制处理
+            try {
+                val qmExtraResult = parseQmExtraResult(response)
+                XxxContext.fetchSourceExtraConfigCallback(qmExtraResult)
+            }catch (t: Throwable){
+                t.printStackTrace()
+            }
+
+            return bodyStr
         } catch (ex: Exception) {
             log.e("获取直播源失败", ex)
             throw Exception("获取直播源失败，请检查网络连接", ex)
