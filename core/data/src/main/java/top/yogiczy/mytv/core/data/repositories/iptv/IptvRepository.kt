@@ -57,6 +57,7 @@ class IptvRepository(
                 JSONObject(qmextraDecoded)
             }
             qmExtraResult.hybridMode = jsonObject.optString("hybridMode")
+            qmExtraResult.loadTimeout = jsonObject.optLong("loadTimeout")
         } catch (ex: Exception) {
             ex.printStackTrace()
         }

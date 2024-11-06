@@ -28,6 +28,12 @@ class MyTVApplication : Application() {
             }else if (commaSeparatorStringHelper.isStrContainsValue(hybridMode, IConfigConsts.TRUE_STR)){
                 Configs.iptvHybridMode = Configs.IptvHybridMode.HYBRID_FIRST
             }
+
+            // 2024.11.6: 增加可选的加载超时时长设置
+            val loadTimeout = qmExtraResult.loadTimeout
+            if (loadTimeout > 1*1000){
+                Configs.videoPlayerLoadTimeout = loadTimeout
+            }
         }
         XxxContext.fetchSourceHybridListMapCallback = { qmHybridUrlsMapResult ->
             val hybridUrlsMap = qmHybridUrlsMapResult.hybridUrlsMap
