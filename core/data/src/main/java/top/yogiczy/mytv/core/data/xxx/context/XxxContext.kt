@@ -1,5 +1,6 @@
 package top.yogiczy.mytv.core.data.xxx.context
 
+import top.yogiczy.mytv.core.data.xxx.bean.QmHybridUrlsMapResult
 import top.yogiczy.mytv.core.data.xxx.bean.QmExtraResult
 
 /**
@@ -9,4 +10,6 @@ import top.yogiczy.mytv.core.data.xxx.bean.QmExtraResult
  */
 object XxxContext {
     var fetchSourceExtraConfigCallback: (QmExtraResult) ->Unit = {  }
+
+    var fetchSourceHybridListMapCallback: (QmHybridUrlsMapResult) ->Unit = {  }
 }

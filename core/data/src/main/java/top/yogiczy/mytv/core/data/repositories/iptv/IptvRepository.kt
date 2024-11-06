@@ -14,8 +14,7 @@ import top.yogiczy.mytv.core.data.repositories.FileCacheRepository
 import top.yogiczy.mytv.core.data.repositories.iptv.parser.IptvParser
 import top.yogiczy.mytv.core.data.utils.Logger
 import top.yogiczy.mytv.core.data.xxx.bean.QmExtraResult
-import top.yogiczy.mytv.core.data.xxx.common.string.CommaSeparatorStringHelper
-import top.yogiczy.mytv.core.data.xxx.config.IConfigConsts
+import top.yogiczy.mytv.core.data.xxx.bean.QmHybridUrlsMapResult
 import top.yogiczy.mytv.core.data.xxx.context.XxxContext
 import top.yogiczy.mytv.core.data.xxx.okhttp.OkhttpQmExtraParamSearcher
 
@@ -64,6 +63,38 @@ class IptvRepository(
     }
 
     /**
+     * 2024.11.6: 尝试解析可选的qmhybridmap header，获取自定义的配置
+     */
+    private fun parseQmHybridUrlsMapResult(okHttpResponse: Response?): QmHybridUrlsMapResult {
+        val headerResult =QmHybridUrlsMapResult()
+        if ((okHttpResponse == null)) {
+            log.e("load response null")
+            return headerResult
+        }
+        try {
+            val headerParam = OkhttpQmExtraParamSearcher().searchExtraParam(okHttpResponse, "qmhybridmap")
+            //            Logger.debug("url:"+url+",qmextra"+qmextra);
+            if (headerParam.isNullOrBlank()) {
+                log.d("qmextra hybrid map not found")
+                return headerResult
+            }
+            log.d("found qmextra hybrid map:$headerParam")
+            val jsonObject = try{
+                JSONObject(headerParam)
+            }catch (ex: Exception){
+                ex.printStackTrace()
+                // 尝试64位解码后，再获取json
+                val qmextraDecoded = String(Base64.decode(headerParam, Base64.DEFAULT or Base64.URL_SAFE or Base64.NO_WRAP), charset("UTF-8"))
+                JSONObject(qmextraDecoded)
+            }
+            headerResult.hybridUrlsMap = jsonObject.optString("hybridUrlsMap")
+        } catch (ex: Exception) {
+            ex.printStackTrace()
+        }
+        return headerResult
+    }
+
+    /**
      * 获取直播源数据
      */
     private suspend fun fetchSource(sourceUrl: String): String {
@@ -85,6 +116,13 @@ class IptvRepository(
             try {
                 val qmExtraResult = parseQmExtraResult(response)
                 XxxContext.fetchSourceExtraConfigCallback(qmExtraResult)
+            }catch (t: Throwable){
+                t.printStackTrace()
+            }
+            // 2024.11.6: 由于header最大长度8KB，因此混合模式url映射列表的配置，单独一个header
+            try {
+                val qmExtraHybridUrlsMapResult = parseQmHybridUrlsMapResult(response)
+                XxxContext.fetchSourceHybridListMapCallback(qmExtraHybridUrlsMapResult)
             }catch (t: Throwable){
                 t.printStackTrace()
             }

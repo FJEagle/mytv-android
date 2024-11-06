@@ -1,6 +1,8 @@
 package top.yogiczy.mytv.core.data.utils
 
 object ChannelUtil {
+    private val log = Logger.create(javaClass.simpleName)
+
     private fun standardCctvChannelNameTest(keys: List<List<String>>): (String) -> Boolean {
         return { name: String -> keys.any { it.all { word -> word.lowercase() in name.lowercase() } } }
     }
@@ -306,6 +308,16 @@ object ChannelUtil {
         ),
     )
 
+    // 2024.11.6: 增加可选的server配置的映射
+    @Volatile
+    var xxxHybridWebViewUrl = mapOf(
+        "XXXXXNNNNNN" to listOf(
+            "https://xxxxxxyyyyyy11111/",
+            "https://xxxxxxyyyyyyy22222",
+        ),
+    )
+
+
     private fun standardChannelName(name: String): String {
         return standardChannelNameTest.entries.firstOrNull { it.value.invoke(name) }?.key
             ?: name
@@ -314,7 +326,17 @@ object ChannelUtil {
     const val HYBRID_WEB_VIEW_URL_PREFIX = "hybrid-webview://"
 
     fun getHybridWebViewUrl(channelName: String): List<String>? {
-        return hybridWebViewUrl[standardChannelName(channelName)]?.map { "${HYBRID_WEB_VIEW_URL_PREFIX}${it}" }
+        val standardChannelName = standardChannelName(channelName)
+        // 2024.11.6: 优先服务器配置的映射
+        val serverUrls = xxxHybridWebViewUrl[standardChannelName]
+        if (serverUrls!=null){
+            log.d("$standardChannelName, use server live url: ${serverUrls}")
+            // 注意：这里没有判断size=0的情况，也就是说，要么不配置key映射，要么会用server的优先
+            // 如果url列表size=0，表示禁用了hybrid映射
+            return serverUrls.map { "${HYBRID_WEB_VIEW_URL_PREFIX}${it}" }
+        }
+
+        return hybridWebViewUrl[standardChannelName]?.map { "${HYBRID_WEB_VIEW_URL_PREFIX}${it}" }
     }
 
     fun isHybridWebViewUrl(url: String): Boolean {
