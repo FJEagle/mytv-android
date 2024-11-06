@@ -15,6 +15,7 @@ import top.yogiczy.mytv.core.data.repositories.iptv.parser.IptvParser
 import top.yogiczy.mytv.core.data.utils.Logger
 import top.yogiczy.mytv.core.data.xxx.bean.QmExtraResult
 import top.yogiczy.mytv.core.data.xxx.bean.QmHybridUrlsMapResult
+import top.yogiczy.mytv.core.data.xxx.common.encoding.Base64Helper
 import top.yogiczy.mytv.core.data.xxx.context.XxxContext
 import top.yogiczy.mytv.core.data.xxx.okhttp.OkhttpQmExtraParamSearcher
 
@@ -52,7 +53,7 @@ class IptvRepository(
             }catch (ex: Exception){
                 ex.printStackTrace()
                 // 尝试64位解码后，再获取json
-                val qmextraDecoded = String(Base64.decode(qmextra, Base64.DEFAULT or Base64.URL_SAFE or Base64.NO_WRAP), charset("UTF-8"))
+                val qmextraDecoded = Base64Helper.decode(qmextra)
                 JSONObject(qmextraDecoded)
             }
             qmExtraResult.hybridMode = jsonObject.optString("hybridMode")
@@ -84,7 +85,7 @@ class IptvRepository(
             }catch (ex: Exception){
                 ex.printStackTrace()
                 // 尝试64位解码后，再获取json
-                val qmextraDecoded = String(Base64.decode(headerParam, Base64.DEFAULT or Base64.URL_SAFE or Base64.NO_WRAP), charset("UTF-8"))
+                val qmextraDecoded = Base64Helper.decode(headerParam)
                 JSONObject(qmextraDecoded)
             }
             headerResult.hybridUrlsMap = jsonObject.optString("hybridUrlsMap")

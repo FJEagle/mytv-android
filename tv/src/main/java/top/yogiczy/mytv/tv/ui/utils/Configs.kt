@@ -19,6 +19,7 @@ import top.yogiczy.mytv.core.data.entities.iptvsource.IptvSourceList
 import top.yogiczy.mytv.core.data.utils.Constants
 import top.yogiczy.mytv.core.data.utils.Logger
 import top.yogiczy.mytv.core.data.utils.SP
+import top.yogiczy.mytv.core.data.xxx.common.encoding.Base64Helper
 import top.yogiczy.mytv.tv.MyTVApplication
 import top.yogiczy.mytv.tv.R
 import top.yogiczy.mytv.tv.ui.screens.videoplayer.VideoPlayerDisplayMode
@@ -263,7 +264,7 @@ object Configs {
                         extUrlFix = if (extUrl.startsWith("http") || extUrl.startsWith("clan://")) {
                             extUrl
                         } else {
-                            String(Base64.decode(extUrl, Base64.DEFAULT or Base64.URL_SAFE or Base64.NO_WRAP), charset("UTF-8"))
+                            Base64Helper.decode(extUrl)
                         }
 
                         // takagen99: Capture Live URL into Config
