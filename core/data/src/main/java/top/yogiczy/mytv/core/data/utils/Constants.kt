@@ -58,8 +58,8 @@ object Constants {
      * Git最新版本信息
      */
     val GIT_RELEASE_LATEST_URL = mapOf(
-        "stable" to "https://ghp.ci/https://raw.githubusercontent.com/yaoxieyoulei/mytv-android-update/main/tv-stable.json",
-        "beta" to "https://ghp.ci/https://raw.githubusercontent.com/yaoxieyoulei/mytv-android-update/main/tv-beta.json",
+        "stable" to "https://xxxxxxxxxxxxxxxxxxxxyyyyyyyyyyyyyyyyyyyyy111.com/yaoxieyoulei/mytv-android-update/main/tv-stable.json",
+        "beta" to "https://xxxxxxxxxxxxxxxxxxxxyyyyyyyyyyyyyyyyyyyyy111.com/yaoxieyoulei/mytv-android-update/main/tv-beta.json",
     )
 
     /**

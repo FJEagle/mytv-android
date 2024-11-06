@@ -36,6 +36,11 @@ class UpdateViewModel : ViewModel() {
         if (_isChecking) return
         if (_isUpdateAvailable) return
 
+        // 2024.11.6: 关闭更新功能
+        if (true){
+            return
+        }
+
         try {
             val releaseUrl = Constants.GIT_RELEASE_LATEST_URL[channel] ?: return
 
